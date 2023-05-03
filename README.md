@@ -6,4 +6,4 @@ QuickDDS {SourceFile} {Destination}
 
 QuickDDS 7ASGARDA_NXG.NXG_TEXTURES extracted
 
-![Screenshot](QuickDDS.PNG)
+![Screenshot](SCREENSHOT.PNG)
