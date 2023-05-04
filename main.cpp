@@ -9,6 +9,11 @@
 #include<windows.h>
 #endif // _WIN32
 
+#ifdef __linux__
+#include<sys/stat.h>
+#include<errno.h>
+#endif
+
 
 char gFCC;
 
@@ -80,23 +85,12 @@ bool ReadDDS(std::ifstream& stream)
 	return true;
 }
 
-void replaceslash(std::string& input)
-{
-	for (int i = 0; i < input.size() - 1; i++)
-	{
-		if (input[i] == '\\')
-		{
-			input[i] = '/';
-		}
-	}
-}
-
 int main(int argc, char** argv)
 {
 	if (argc == 1)
 	{
 		printf("Not enough arguments.\n");
-		printf("Usage is: QuickDDS File (WINDOWS ONLY)\n");
+		printf("Usage is: QuickDDS File\n");
 		printf("Usage is: QuickDDS File Destination\n");
 		std::cin.get();
 		return 1;
@@ -106,7 +100,6 @@ int main(int argc, char** argv)
 
 	printf("\nQuickDDS\n");
 	printf("A simple DDS extraction tool, developed by SmakDev\n");
-	printf("\nDestination: %s\n", resDir.c_str());
 
 	if (argc == 3)
 	{
@@ -121,14 +114,15 @@ int main(int argc, char** argv)
 		}
 		resDir += '/';
 	}
-#ifdef WIN32
 	else if (argc == 2)
 	{
-		std::string Name = srcFile.substr(srcFile.find_last_of('\\') + 1); // GET FILE NAME WITHOUT EXTENSION
+		std::string Name = "";
+		std::string Path = "";
+#ifdef WIN32
+		Name = srcFile.substr(srcFile.find_last_of('\\') + 1); // GET FILE NAME WITHOUT EXTENSION
 		Name = Name.substr(0, Name.find_last_of('.'));
-		std::string Path = srcFile.substr(0, srcFile.find_last_of('\\')) + '\\'; // GET FILES FOLDER
+		Path = srcFile.substr(0, srcFile.find_last_of('\\')) + '\\'; // GET FILES FOLDER
 		resDir = Path + Name + '\\'; // SET RESDIR TO DIRECTORY
-		printf("Source: %s\n\n", srcFile.c_str());
 
 		if (!CreateDirectoryA(resDir.c_str(), NULL))
 		{
@@ -145,18 +139,41 @@ int main(int argc, char** argv)
 			std::cin.get();
 			return -1;
 		}
-	}
-#else
-	if (argc == 2)
-	{
-		printf("Not enough arguments.\n");
-		printf("Usage is: QuickDDS File (WINDOWS ONLY)\n");
-		printf("Usage is: QuickDDS File Destination\n");
-		std::cin.get();
-		return 1;
-	}
 #endif // _WIN32
 
+#ifdef __linux__
+		for (int i = 0; i < resDir.size(); i++)
+		{
+			if (resDir[i] == '\\')
+			{
+				resDir[i] = '/';
+			}
+		}
+		resDir += '/';
+		Name = "";
+		Path = "./";
+		Name = srcFile.substr(srcFile.find_last_of('/') + 1); // GET FILE NAME WITHOUT EXTENSION
+		Name = Name.substr(0, Name.find_last_of('.'));
+		Path = srcFile.substr(0, srcFile.find_last_of('/')) + '/'; // GET FILES FOLDER
+		resDir = Path + Name + '/'; // SET RESDIR TO DIRECTORY
+
+		if (-1 == mkdir(resDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+		{
+			int error = ENOENT;
+			if (error == 2)
+			{
+				printf("\n\x1B[31mError %d: Path not found. Please Specify a Full path\033[0m\n", error);
+			}
+			else
+			{
+				printf("\x1B[31mError: %d\033[0m\n", error);
+			}
+			std::cin.get();
+			return -1;
+		}
+#endif
+
+	}
 	printf("\nDestination: %s\n", resDir.c_str());
 	printf("Source: %s\n\n", srcFile.c_str());
 	printf("  Offset           Size          Name        FourCC\n");
@@ -172,7 +189,7 @@ int main(int argc, char** argv)
 	uint64_t FileSize = iStream.tellg();
 	iStream.seekg(0, iStream.beg);
 
-	int position = 0 ;
+	int position = 0;
 	uint32_t ResCount = 0;
 	uint32_t NavByte = 0;
 	for (uint64_t i = 0; i < FileSize; i++)
@@ -208,7 +225,7 @@ int main(int argc, char** argv)
 				OStream.close();
 				delete[] buffer;
 				printf("  %016x ", position);
-				printf("%-*d", 11, (unsigned long)size);
+				printf("%-*lu", 11, (unsigned long)size);
 				printf("%*d.dds        ", 4, ResCount);
 				printf("DXT%c\n", gFCC);
 				i = iStream.tellg();
