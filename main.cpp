@@ -4,6 +4,12 @@
 #include<iostream>
 #include"DDSHelper.h"
 
+// FOR CREATING DIR
+#ifdef _WIN32
+#include<windows.h>
+#endif // _WIN32
+
+
 char gFCC;
 
 bool ReadDDS(std::ifstream& stream)
@@ -74,27 +80,83 @@ bool ReadDDS(std::ifstream& stream)
 	return true;
 }
 
+void replaceslash(std::string& input)
+{
+	for (int i = 0; i < input.size() - 1; i++)
+	{
+		if (input[i] == '\\')
+		{
+			input[i] = '/';
+		}
+	}
+}
+
 int main(int argc, char** argv)
 {
-	if (argc != 3)
+	if (argc == 1)
 	{
-		printf("Not enough arguments.\nUsage is: QuickDDS Source Destination");
+		printf("Not enough arguments.\n");
+		printf("Usage is: QuickDDS File (WINDOWS ONLY)\n");
+		printf("Usage is: QuickDDS File Destination\n");
 		std::cin.get();
 		return 1;
 	}
 	std::string srcFile = argv[1];
-	std::string resDir = argv[2];
-	for (int i = 0; i < resDir.size(); i++)
-	{
-		if (resDir[i] == '\\')
-		{
-			resDir[i] = '/';
-		}
-	}
-	resDir += '/';
+	std::string resDir = " ";
 
 	printf("\nQuickDDS\n");
 	printf("A simple DDS extraction tool, developed by SmakDev\n");
+	printf("\nDestination: %s\n", resDir.c_str());
+
+	if (argc == 3)
+	{
+		resDir = argv[2];
+
+		for (int i = 0; i < resDir.size(); i++)
+		{
+			if (resDir[i] == '\\')
+			{
+				resDir[i] = '/';
+			}
+		}
+		resDir += '/';
+	}
+#ifdef WIN32
+	else if (argc == 2)
+	{
+		std::string Name = srcFile.substr(srcFile.find_last_of('\\') + 1); // GET FILE NAME WITHOUT EXTENSION
+		Name = Name.substr(0, Name.find_last_of('.'));
+		std::string Path = srcFile.substr(0, srcFile.find_last_of('\\')) + '\\'; // GET FILES FOLDER
+		resDir = Path + Name + '\\'; // SET RESDIR TO DIRECTORY
+		printf("Source: %s\n\n", srcFile.c_str());
+
+		if (!CreateDirectoryA(resDir.c_str(), NULL))
+		{
+			int error = GetLastError();
+			if (error == 0xB7) // PATH EXISTS
+			{
+				printf("\x1B[31mError %d: The directory already exists.\033[0m\n", error);
+			}
+			else
+			{
+				printf("\x1B[31mError: %d\033[0m\n", error);
+			}
+			printf("\nhttps://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes");
+			std::cin.get();
+			return -1;
+		}
+	}
+#else
+	if (argc == 2)
+	{
+		printf("Not enough arguments.\n");
+		printf("Usage is: QuickDDS File (WINDOWS ONLY)\n");
+		printf("Usage is: QuickDDS File Destination\n");
+		std::cin.get();
+		return 1;
+	}
+#endif // _WIN32
+
 	printf("\nDestination: %s\n", resDir.c_str());
 	printf("Source: %s\n\n", srcFile.c_str());
 	printf("  Offset           Size          Name        FourCC\n");
@@ -132,6 +194,7 @@ int main(int argc, char** argv)
 				uint64_t size = ((uint64_t)iStream.tellg()) - i;
 				iStream.seekg(i, iStream.beg);
 				std::string filename = resDir + std::to_string(ResCount) + ".dds";
+
 				std::ofstream OStream(filename.c_str(), std::ios::binary);
 				if (!OStream.is_open())
 				{
@@ -159,6 +222,17 @@ int main(int argc, char** argv)
 	}
 	iStream.close();
 	printf("\n---------------------------------------------------\n");
-	printf("Found %d DDS files\n", ResCount);
+	if (ResCount)
+	{
+		printf("Found %d DDS files\n", ResCount);
+	}
+	else
+	{
+		printf("No DDS Files found in file\n");
+#ifdef _WIN32
+		RemoveDirectoryA(resDir.c_str());
+#endif // _WIN32
+	}
+	std::cin.get();
 	return 0;
 }
