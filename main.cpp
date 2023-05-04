@@ -249,6 +249,9 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 		RemoveDirectoryA(resDir.c_str());
 #endif // _WIN32
+#ifdef __linux__
+		rmdir(resDir.c_str());
+#endif
 	}
 	std::cin.get();
 	return 0;
