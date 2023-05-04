@@ -1,5 +1,5 @@
 # QuickDDS
-A simple commandline DDS extraction tool, Developed by SmakDev.
+A simple cross platform commandline DDS extraction tool, Developed by SmakDev.
 
 ## Usage
 
