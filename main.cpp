@@ -10,6 +10,7 @@
 #endif // _WIN32
 
 #ifdef __linux__
+#include<unistd.h>
 #include<sys/stat.h>
 #include<errno.h>
 #endif
